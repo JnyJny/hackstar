@@ -2,7 +2,9 @@
 """
 
 import click
+
 from .engine import TheGame
+
 
 @click.command()
 def cli():
