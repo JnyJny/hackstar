@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "tcod-tutorial"
+name = "hackstar"
 version = "0.1.0"
 description = "tcod roguelike tutorial"
 authors = ["JnyJny <erik.oshaughnessy@gmail.com>"]
