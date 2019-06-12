@@ -1,6 +1,8 @@
 """
 """
 
+from loguru import logger
+
 import tcod as libtcod
 
 class Player:
@@ -12,4 +14,12 @@ class Player:
         return '@'
 
     def draw(self, console=0):
+        """
+        """
         libtcod.console_put_char(console, self.x, self.y, str(self), libtcod.BKGND_NONE)
+
+    def move(self, x, y):
+        """
+        """
+        self.x += x
+        self.y += y
