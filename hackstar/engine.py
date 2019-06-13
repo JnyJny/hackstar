@@ -1,12 +1,18 @@
 """Game Event Loop
 """
 
-from loguru import logger
 import tcod
+
+from loguru import logger
 from pathlib import Path
 
+from .entity import Entity
 from .player import Player
-from .actions import action_exceptions, MoveAction, FullscreenAction, QuitAction
+from .actions import action_exceptions
+from .actions import MoveAction
+from .actions import FullscreenAction
+from .actions import QuitAction
+from .maps import Map, Tile
 
 
 class TheGame:
@@ -21,6 +27,8 @@ class TheGame:
 
         self.w = w
         self.h = h
+        self.map_h = self.h - 5
+
         self._resources = Path(__file__).resolve().parent / "resources"
         self.font = self._resources / (font or "arial10x10.png")
 
@@ -30,9 +38,35 @@ class TheGame:
         tcod.console_set_custom_font(
             str(self.font), tcod.FONT_TYPE_GREYSCALE | tcod.FONT_LAYOUT_TCOD
         )
+
         tcod.console_init_root(self.w, self.h, "HaCkStAr", fullscreen)
-        self.console = 0
-        self.player = Player(self.w // 2, self.h // 2)
+        self.console = tcod.console_new(self.w, self.h)
+
+        self.player = Entity(self.w // 2, self.h // 2, "@", tcod.green)
+        self.npc = Entity(self.w // 2 + 4, self.h // 2, "@", tcod.red)
+
+        self.entities = [self.player, self.npc]
+
+    @property
+    def colors(self):
+        try:
+            return self._colors
+        except AttributeError:
+            pass
+        self._colors = {
+            "dark_wall": tcod.Color(0, 0, 100),
+            "dark_grnd": tcod.Color(50, 50, 150),
+        }
+        return self._colors
+
+    @property
+    def map(self):
+        try:
+            return self._map
+        except AttributeError:
+            pass
+        self._map = Map(self.w, self.map_h)
+        return self._map
 
     @property
     def key(self) -> tcod.Key:
@@ -59,6 +93,9 @@ class TheGame:
     def run(self) -> None:
         """Start the game loop.
         """
+
+        self.map.random_walls()
+
         while not tcod.console_is_window_closed():
             self.update()
             self.draw()
@@ -75,7 +112,7 @@ class TheGame:
 
         except MoveAction as move:
             logger.debug(f"move action: {move}")
-            self.player.move(move.x, move.y)
+            self.player.move_and_draw(move.x, move.y, self.console)
 
         except FullscreenAction:
             logger.debug("Fullscreen")
@@ -88,8 +125,14 @@ class TheGame:
     def draw(self) -> None:
         """Draw game state to screen.
         """
+
         tcod.console_set_default_foreground(self.console, tcod.white)
-        self.player.draw(self.console)
+
+        self.map.draw(self.console, self.colors)
+
+        for entity in self.entities:
+            entity.draw(self.console)
+
         tcod.console_blit(self.console, 0, 0, self.w, self.h, 0, 0, 0)
 
     def flush(self) -> None:

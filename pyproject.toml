@@ -13,6 +13,7 @@ python = "^3.7"
 tcod = "^10.1"
 click = "^7.0"
 loguru = "^0.2.5"
+pre-commit = "^1.17"
 
 [tool.poetry.dev-dependencies]
 
