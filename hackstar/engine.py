@@ -112,7 +112,14 @@ class TheGame:
 
         except MoveAction as move:
             logger.debug(f"move action: {move}")
-            self.player.move_and_draw(move.x, move.y, self.console)
+
+            x, y = self.player.x + move.x, self.player.y + move.y
+
+            if not self.map.is_blocked(x, y):
+                self.player.erase(self.console)
+                self.player.move(move.x, move.y)
+            else:
+                logger.debug(f"move to {(x,y)} obstructed.")
 
         except FullscreenAction:
             logger.debug("Fullscreen")

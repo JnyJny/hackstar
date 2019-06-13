@@ -33,6 +33,16 @@ class Map:
             t.block_sight = True
             logger.debug(f"{x},{y} blocked {t.blocked} {t.is_wall}")
 
+    def is_blocked(self, x: int, y: int) -> bool:
+        """
+        """
+        return self.tiles[x][y].blocked
+
+    def is_opaque(self, x: int, y: int) -> bool:
+        """
+        """
+        return self.tiles[x][y].block_sight
+
     def draw(self, console, colors):
         """
         """
