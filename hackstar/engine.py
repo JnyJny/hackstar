@@ -12,7 +12,7 @@ from .actions import action_exceptions
 from .actions import MoveAction
 from .actions import FullscreenAction
 from .actions import QuitAction
-from .maps import Map, Tile
+from .maps import Map, Tile, Rect
 
 
 class TheGame:
@@ -66,6 +66,9 @@ class TheGame:
         except AttributeError:
             pass
         self._map = Map(self.w, self.map_h)
+
+        self._map.dig_dungeon(self.player)
+
         return self._map
 
     @property
@@ -93,8 +96,6 @@ class TheGame:
     def run(self) -> None:
         """Start the game loop.
         """
-
-        self.map.random_walls()
 
         while not tcod.console_is_window_closed():
             self.update()
