@@ -56,9 +56,17 @@ class Rect:
         return range(self.y + 1, self.y1, step)
 
     def __contains__(self, other):
+
         return (
             self.x <= other.x1
             and self.x1 >= other.x
             and self.y <= other.y1
             and self.y1 >= other.y
         )
+
+    def has_point(self, point):
+        """
+        """
+        x, y, *_ = point
+
+        # XXX point in rect

@@ -32,9 +32,6 @@ class TheGame:
         self._resources = Path(__file__).resolve().parent / "resources"
         self.font = self._resources / (font or "arial10x10.png")
 
-        logger.info(f"Console dimensions {w}x{h}")
-        logger.info(f"Font: {self.font}")
-
         tcod.console_set_custom_font(
             str(self.font), tcod.FONT_TYPE_GREYSCALE | tcod.FONT_LAYOUT_TCOD
         )
@@ -47,6 +44,15 @@ class TheGame:
 
         self.entities = [self.player, self.npc]
 
+        logger.info(f"Console dimensions {w}x{h}")
+        logger.info(f"Font: {self.font}")
+        for i, entity in enumerate(self.entities):
+            logger.info(f"Entity {i} : {entity!r}")
+
+        self.fov_algorithm = 0
+        self.fov_light_walls = True
+        self.fov_radius = 10
+
     @property
     def colors(self):
         try:
@@ -56,6 +62,8 @@ class TheGame:
         self._colors = {
             "dark_wall": tcod.Color(0, 0, 100),
             "dark_grnd": tcod.Color(50, 50, 150),
+            "light_wall": tcod.Color(130, 110, 50),
+            "light_grnd": tcod.Color(200, 180, 50),
         }
         return self._colors
 
@@ -66,9 +74,7 @@ class TheGame:
         except AttributeError:
             pass
         self._map = Map(self.w, self.map_h)
-
         self._map.dig_dungeon(self.player)
-
         return self._map
 
     @property
@@ -108,6 +114,14 @@ class TheGame:
 
         tcod.sys_check_for_event(tcod.EVENT_KEY_PRESS, self.key, self.mouse)
 
+        self.map.recompute_fov(
+            self.player.x,
+            self.player.y,
+            self.fov_radius,
+            self.fov_light_walls,
+            self.fov_algorithm,
+        )
+
         try:
             action_exceptions(self.key, self.mouse)
 
@@ -119,6 +133,7 @@ class TheGame:
             if not self.map.is_blocked(x, y):
                 self.player.erase(self.console)
                 self.player.move(move.x, move.y)
+                self.map.needs_fov_recompute = True
             else:
                 logger.debug(f"move to {(x,y)} obstructed.")
 
