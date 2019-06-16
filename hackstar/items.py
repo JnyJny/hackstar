@@ -5,8 +5,8 @@ from loguru import logger
 from .entity import Entity, Entities
 
 
-class Player(Entity):
-    """A player entity.
+class Item(Entity):
+    """An item entity.
     """
 
-    kind = Entities.PLAYER
+    kind = Entities.ITEM

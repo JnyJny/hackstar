@@ -157,20 +157,24 @@ class Map:
             )
             tcod.map_compute_fov(self.fov_map, x, y, radius, light_walls, algorithm)
 
-    def draw(self, console, colors, do_fov=False):
+    def draw(self, console, colors, force=False):
         """
         """
 
-        if not self.needs_fov_recompute and not do_fov:
+        if not self.needs_fov_recompute and not force:
             return
 
         for tile in self:
-
+            visible = tcod.map_is_in_fov(self.fov_map, tile.x, tile.y)
+            # XXX tile should take more responsibility for what it's color
+            #     is depending on it's configuration.
+            #
             color = 0x000000
             if tile.is_wall:
-                color = colors["dark_wall"]
+                color = colors["light_wall"] if visible else colors["dark_wall"]
             if tile.is_floor:
-                color = colors["dark_grnd"]
+                color = colors["light_grnd"] if visible else colors["dark_grnd"]
             tcod.console_set_char_background(
                 console, tile.x, tile.y, color, tcod.BKGND_SET
             )
+        self.needs_fov_recompute = False
