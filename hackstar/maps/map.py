@@ -7,13 +7,20 @@ from loguru import logger
 
 from .tile import Tile
 from .rect import Rect
+from ..util import random_xy
+from ..monsters import random_monster
+
+# from ..items import random_item
 
 
 class Map:
-    def __init__(self, width, height):
+    def __init__(self, width, height, player) -> None:
         self.w = width
         self.h = height
+        self.player = player
         self.needs_fov_recompute = True
+        self.dig_dungeon()
+        self.add_monsters()
 
     @property
     def tiles(self):
@@ -33,7 +40,85 @@ class Map:
         self._rooms = []
         return self._rooms
 
-    def dig_dungeon(self, player, max_rooms=11, min_size=6, max_size=10):
+    @property
+    def entities(self):
+        try:
+            return self._entities
+        except AttributeError:
+            pass
+        self._entities = {}
+        return self._entities
+
+    def add_entity(self, entity):
+        """
+        :param .Entity subclass entity:
+        :return: bool
+        """
+        stored = self.entities.setdefault(entity.position, entity)
+        return stored == entity
+
+    def entity_at(self, coords):
+        """
+        :param tuple coords:
+        :return .Entity subclass:
+        """
+        return self.entities.get(coords, None)
+
+    def remove_entity(self, entity):
+        """
+        :param .Entity subclass entity:
+        :return: bool
+        """
+
+        try:
+            position = entity.position
+        except AttributeError:
+            position = entity
+
+        try:
+            return self.entities.pop(position)
+        except KeyError:
+            pass
+        logger.debug(f"Remove failed, no entity @ {position}")
+        return None
+
+    def populate_room(self, room, max_monsters: int) -> list:
+        """
+        :param .maps.Rect room:
+        :param int max_monsters:
+        :return: list of monsters placed
+        """
+        n_monsters = random.randint(0, max_monsters)
+
+        x_range = (room.x + 1, room.x1 - 1)
+        y_range = (room.y + 1, room.y1 - 1)
+
+        monsters = [random_monster() for _ in range(n_monsters)]
+
+        for monster in monsters:
+            logger.debug(f"Monster: {monster!r}")
+
+        for monster in monsters:
+            monster.position = random_xy(x_range, y_range)
+            while not self.add_entity(monster):
+                logger.debug(f"OCCUPADO @ {monster.position}")
+                monster.position = random_xy(x_range, y_range)
+            logger.debug(f"Placed monster {monster!r}")
+        return monsters
+
+    def add_monsters(self, max_monsters_per_room=3) -> None:
+        """
+        """
+        logger.info("Adding monsters to rooms")
+        for room in self.rooms:
+            self.populate_room(room, max_monsters_per_room)
+
+    def add_loot(self, max_loot_per_room=2) -> None:
+        """
+        """
+        logger.info("Adding loot to rooms")
+
+    def dig_dungeon(self, max_rooms=11, min_size=6, max_size=10):
         """
         """
         min_x, max_x = 0, self.w - 1
@@ -50,7 +135,9 @@ class Map:
                 logger.debug(f"Room: {room}")
                 self.dig_room(room)
                 if len(self.rooms) == 0:
-                    player.x, player.y = room.center
+                    self.player.position = room.center
+                    self.add_entity(self.player)
+                    assert len(self.entities) == 1
                 else:
                     room_x, room_y = room.center
                     other_x, other_y = self.rooms[-1].center
@@ -147,34 +234,42 @@ class Map:
             )
         return self._fov_map
 
-    def recompute_fov(self, x, y, radius, light_walls=True, algorithm=0) -> None:
+    def update(self, radius, light_walls=True, algorithm=0) -> None:
         """
         """
 
         if self.needs_fov_recompute:
             logger.debug(
-                f"Recomputing FOV for {(x,y)} radius {radius} algorithm:{algorithm}"
+                f"Recomputing FOV for {self.player.position} radius {radius} algorithm:{algorithm}"
             )
-            tcod.map_compute_fov(self.fov_map, x, y, radius, light_walls, algorithm)
+            tcod.map_compute_fov(
+                self.fov_map,
+                self.player.x,
+                self.player.y,
+                radius,
+                light_walls,
+                algorithm,
+            )
 
-    def draw(self, console, colors, force=False):
+    def draw(self, console: int, colors: dict, force: bool = False) -> None:
         """
         """
 
-        if not self.needs_fov_recompute and not force:
-            return
+        if self.needs_fov_recompute or force:
+            for tile in self:
+                visible = tcod.map_is_in_fov(self.fov_map, tile.x, tile.y)
+                # XXX tile should take more responsibility for what it's color
+                #     is depending on it's configuration.
+                #
+                color = 0x000000
+                if tile.is_wall:
+                    color = colors["light_wall"] if visible else colors["dark_wall"]
+                if tile.is_floor:
+                    color = colors["light_grnd"] if visible else colors["dark_grnd"]
+                tcod.console_set_char_background(
+                    console, tile.x, tile.y, color, tcod.BKGND_SET
+                )
+            self.needs_fov_recompute = False
 
-        for tile in self:
-            visible = tcod.map_is_in_fov(self.fov_map, tile.x, tile.y)
-            # XXX tile should take more responsibility for what it's color
-            #     is depending on it's configuration.
-            #
-            color = 0x000000
-            if tile.is_wall:
-                color = colors["light_wall"] if visible else colors["dark_wall"]
-            if tile.is_floor:
-                color = colors["light_grnd"] if visible else colors["dark_grnd"]
-            tcod.console_set_char_background(
-                console, tile.x, tile.y, color, tcod.BKGND_SET
-            )
-        self.needs_fov_recompute = False
+        for coord, entity in self.entities.items():
+            entity.draw(console)

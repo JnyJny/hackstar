@@ -45,14 +45,10 @@ class TheGame:
         tcod.console_init_root(self.w, self.h, "HaCkStAr", fullscreen)
         self.console = tcod.console_new(self.w, self.h)
 
-        self.player = Player(self.w // 2, self.h // 2, "@", tcod.black, tcod.BKGND_NONE)
-
-        self.add_entity(self.player)
-
         logger.info(f"Console dimensions {w}x{h}")
         logger.info(f"Font: {self.font}")
 
-        for i, pair in enumerate(self.entities.items()):
+        for i, pair in enumerate(self.map.entities.items()):
             logger.info(f"Entity {i} @ {pair[0]}:  {pair[1]!r}")
 
         self.fov_algorithm = 0
@@ -60,6 +56,17 @@ class TheGame:
         self.fov_radius = 10
 
         self.state = GameState.PLAYER_TURN
+
+    @property
+    def player(self):
+        try:
+            return self._player
+        except AttributeError:
+            pass
+        self._player = Player(
+            self.w // 2, self.h // 2, "@", tcod.black, tcod.BKGND_NONE
+        )
+        return self._player
 
     @property
     def colors(self):
@@ -81,10 +88,7 @@ class TheGame:
             return self._map
         except AttributeError:
             pass
-        self._map = Map(self.w, self.map_h)
-        self._map.dig_dungeon(self.player)
-        for room in self._map.rooms:
-            self.place_monsters(room, 3)
+        self._map = Map(self.w, self.map_h, self.player)
         return self._map
 
     @property
@@ -109,82 +113,19 @@ class TheGame:
         self._mouse = tcod.Mouse()
         return self._mouse
 
-    @property
-    def entities(self):
-        try:
-            return self._entities
-        except AttributeError:
-            pass
-        self._entities = {}
-        return self._entities
-
-    def add_entity(self, entity):
+    def player_turn(self, action=None) -> None:
         """
-        :param .Entity subclass entity:
-        :return: bool
+        :param action:
         """
-        stored = self.entities.setdefault(entity.position, entity)
-        return stored == entity
-
-    def entity_at(self, coords):
-        """
-        :param tuple coords:
-        :return .Entity subclass:
-        """
-        return self.entities.get(coords, None)
-
-    def remove_entity(self, entity):
-        """
-        :param .Entity subclass entity:
-        :return: bool
-        """
-
-        try:
-            position = entity.position
-        except AttributeError:
-            position = entity
-
-        try:
-            return self.entities.pop(position)
-        except KeyError:
-            pass
-        logger.debug(f"Remove failed, no entity @ {position}")
-        return None
-
-    def place_monsters(self, room, max_monsters: int) -> list:
-        """
-        :param .maps.Rect room:
-        :param int max_monsters:
-        :return: list of monsters placed
-        """
-        n_monsters = random.randint(0, max_monsters)
-
-        x_range = (room.x + 1, room.x1 - 1)
-        y_range = (room.y + 1, room.y1 - 1)
-
-        monsters = [random_monster() for _ in range(n_monsters)]
-
-        for monster in monsters:
-            logger.debug(f"Monster: {monster!r}")
-
-        for monster in monsters:
-            monster.position = random_xy(x_range, y_range)
-            while not self.add_entity(monster):
-                logger.debug(f"OCCUPADO @ {monster.position}")
-                monster.position = random_xy(x_range, y_range)
-            logger.debug(f"Placed monster {monster!r}")
-        return monsters
-
-    def player_turn(self, action=None):
-        """
-        """
-        logger.info(f"Player Turn: action={action}")
+        logger.info(f"Player Turn: action={action!r}")
+        self.state = GameState.MONSTER_TURN
 
         if isinstance(action, MoveAction):
             move = action
+
             x, y = self.player.x + move.x, self.player.y + move.y
 
-            entity = self.entity_at((x, y))
+            entity = self.map.entity_at((x, y))
 
             if entity and entity.is_monster:
                 self.player.attack(entity)
@@ -198,17 +139,20 @@ class TheGame:
                     self.player.erase(self.console)
                     self.player.move(move.x, move.y)
                     self.map.needs_fov_recompute = True
+            return
 
-        self.state = GameState.MONSTER_TURN
-
-    def monsters_turn(self, action=None):
+    def monsters_turn(self, action=None) -> None:
+        """
+        :param action:
+        """
 
         logger.info(f"Monster Turn: action={action}")
-
-        for coord, entity in self.entities.items():
-            logger.info(f"Monster {entity.name} @ {coord} ponders the meaning of life")
-
         self.state = GameState.PLAYER_TURN
+        for coord, entity in self.map.entities.items():
+            try:
+                entity.take_turn()
+            except AttributeError:
+                pass
 
     def run(self) -> None:
         """Start the game loop.
@@ -246,13 +190,7 @@ class TheGame:
         # XXX this should be moved into map.draw
         #     map needs a FOV radius, light_walls and algorithm
 
-        self.map.recompute_fov(
-            self.player.x,
-            self.player.y,
-            self.fov_radius,
-            self.fov_light_walls,
-            self.fov_algorithm,
-        )
+        self.map.update(self.fov_radius, self.fov_light_walls, self.fov_algorithm)
 
     def draw(self) -> None:
         """Draw game state to screen.
@@ -261,9 +199,6 @@ class TheGame:
         tcod.console_set_default_foreground(self.console, tcod.white)
 
         self.map.draw(self.console, self.colors)
-
-        for coord, entity in self.entities.items():
-            entity.draw(self.console)
 
         tcod.console_blit(self.console, 0, 0, self.w, self.h, 0, 0, 0)
 
