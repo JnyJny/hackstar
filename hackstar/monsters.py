@@ -6,9 +6,11 @@ import random
 
 from loguru import logger
 from .entity import Entity, Entities
+from .components.fighter import Fighter
+from .components.ai import BasicMonster
 
 
-class Monster(Entity):
+class Monster(Entity, Fighter, BasicMonster):
     """A monster entity.
     """
 

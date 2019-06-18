@@ -1,6 +1,7 @@
 """
 """
 from loguru import logger
+import math
 import tcod
 
 from dataclasses import dataclass, field
@@ -38,7 +39,7 @@ class Entity:
         return self._name
 
     @name.setter
-    def name(self, new_name):
+    def name(self, new_name) -> None:
         self._name = new_name
 
     @property
@@ -48,7 +49,7 @@ class Entity:
         return (self.x, self.y)
 
     @position.setter
-    def position(self, new_position):
+    def position(self, new_position) -> None:
         """Set the entity's coordinates using a tuple or list.
         """
         self.x, self.y, = new_position[:2]
@@ -65,6 +66,27 @@ class Entity:
         self.x += dx
         self.y += dy
         return (x, y)
+
+    def move_toward(self, target_x: int, target_y: int, game_map) -> None:
+        """
+        """
+
+        dx = target_x - self.x
+        dy = target_y - self.y
+        distance = math.sqrt(dx ** 2 + dy ** 2)
+        dx //= distance
+        dy //= distance
+        logger.info(f"Entity {self} move_toward {(target_x, target_y)} -> {(dx,dy)}")
+
+    def distance_to(self, other):
+        """
+        """
+        try:
+            dx, dy = other.x - self.x, other.y - self.y
+        except AttributeError:
+            dx, dy = other[0] - self.x, other[1] - self.y
+
+        return math.sqrt(dx ** 2 + dy ** 2)
 
     def erase(self, console, blank: str = " ", bg: int = None) -> None:
         """Erase this entity at it's current coords.
@@ -108,8 +130,3 @@ class Entity:
     @property
     def is_item(self) -> bool:
         return self.kind == Entities.ITEM
-
-    def attack(self, other):
-        """Attack the other entity.
-        """
-        logger.info(f"{self.name} is attacking {other.name}")
