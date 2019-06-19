@@ -48,8 +48,8 @@ class TheGame:
         logger.info(f"Console dimensions {w}x{h}")
         logger.info(f"Font: {self.font}")
 
-        for i, pair in enumerate(self.map.entities.items()):
-            logger.info(f"Entity {i} @ {pair[0]}:  {pair[1]!r}")
+        for i, entity in enumerate(self.map.entities):
+            logger.info(f"Entity {i} {entity!r}")
 
         self.fov_algorithm = 0
         self.fov_light_walls = True
@@ -114,16 +114,20 @@ class TheGame:
         return self._mouse
 
     def player_turn(self, action=None) -> None:
-        """
+        """Handle the player's action
         :param action:
         """
-        logger.info(f"Player Turn: action={action!r}")
+
+        if self.state != GameState.PLAYER_TURN:
+            return
+
+        logger.info(f"Player Turn: action={action!r} {self.player!r} {self.player.hp}")
+
         self.state = GameState.MONSTER_TURN
 
         if isinstance(action, MoveAction):
-            move = action
 
-            x, y = self.player.x + move.x, self.player.y + move.y
+            x, y = self.player.x + action.x, self.player.y + action.y
 
             entity = self.map.entity_at((x, y))
 
@@ -137,7 +141,7 @@ class TheGame:
                     logger.info(f"move to {(x,y)} obstructed.")
                 else:
                     self.player.erase(self.console)
-                    self.player.move(move.x, move.y)
+                    self.player.move(action.x, action.y)
                     self.map.needs_fov_recompute = True
             return
 
@@ -148,9 +152,10 @@ class TheGame:
 
         logger.info(f"Monster Turn: action={action}")
         self.state = GameState.PLAYER_TURN
-        for coord, entity in self.map.entities.items():
+        for entity in self.map.entities:
             try:
-                entity.take_turn()
+                entity.erase(self.console)
+                entity.take_turn(self.player, self.map)
             except AttributeError:
                 pass
 
@@ -170,14 +175,14 @@ class TheGame:
         tcod.sys_check_for_event(tcod.EVENT_KEY_PRESS, self.key, self.mouse)
 
         try:
-            action_exceptions(self.key, self.mouse)
-        except MoveAction as move:
 
-            if self.state == GameState.PLAYER_TURN:
-                self.player_turn(move)
+            action_exceptions(self.key, self.mouse)
+
+        except MoveAction as action:
+
+            self.player_turn(action)
 
         except FullscreenAction:
-            logger.debug("Fullscreen")
             tcod.console_set_fullscreen(not tcod.console_is_fullscreen())
 
         except QuitAction:
@@ -187,8 +192,9 @@ class TheGame:
         if self.state == GameState.MONSTER_TURN:
             self.monsters_turn()
 
-        # XXX this should be moved into map.draw
-        #     map needs a FOV radius, light_walls and algorithm
+        # XXX the player object should hold FOV radius, light walls
+        #     since those are related to the player ( and map has a
+        #     reference to player ).
 
         self.map.update(self.fov_radius, self.fov_light_walls, self.fov_algorithm)
 

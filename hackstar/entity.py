@@ -65,18 +65,36 @@ class Entity:
         x, y = self.x, self.y
         self.x += dx
         self.y += dy
+        self.last = (x, y)
         return (x, y)
 
-    def move_toward(self, target_x: int, target_y: int, game_map) -> None:
+    def move_towards(self, target_x: int, target_y: int, game_map) -> None:
         """
         """
 
         dx = target_x - self.x
         dy = target_y - self.y
         distance = math.sqrt(dx ** 2 + dy ** 2)
-        dx //= distance
-        dy //= distance
-        logger.info(f"Entity {self} move_toward {(target_x, target_y)} -> {(dx,dy)}")
+        dx, dy = int(dx // distance), int(dy // distance)
+
+        logger.info(
+            f"Entity {self.name} wants to move toward {(target_x, target_y)} -> {(dx, dy)}"
+        )
+
+        x, y = self.x + dx, self.y + dy
+
+        if game_map.is_blocked(x, y):
+            logger.info(f"Entity {self.name} blocked at {(x, y)}")
+            return False
+
+        entity = game_map.entity_at((x, y))
+        if entity and entity.is_monster:
+            logger.info(f"Entity {self.name} blocked at {(x, y)} by {entity}")
+            return False
+
+        self.move(dx, dy)
+        logger.info(f"Entity {self.name} did move toward {(target_x, target_y)}")
+        return True
 
     def distance_to(self, other):
         """
@@ -96,7 +114,6 @@ class Entity:
         :param int y:
         """
         bg = bg or tcod.BKGND_NONE
-
         tcod.console_put_char(console, self.x, self.y, blank, bg)
 
     def draw(self, console: int = 0, blank: bool = True) -> None:

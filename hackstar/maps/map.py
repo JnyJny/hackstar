@@ -46,40 +46,17 @@ class Map:
             return self._entities
         except AttributeError:
             pass
-        self._entities = {}
+        self._entities = []
         return self._entities
-
-    def add_entity(self, entity):
-        """
-        :param .Entity subclass entity:
-        :return: bool
-        """
-        stored = self.entities.setdefault(entity.position, entity)
-        return stored == entity
 
     def entity_at(self, coords):
         """
         :param tuple coords:
         :return .Entity subclass:
         """
-        return self.entities.get(coords, None)
-
-    def remove_entity(self, entity):
-        """
-        :param .Entity subclass entity:
-        :return: bool
-        """
-
-        try:
-            position = entity.position
-        except AttributeError:
-            position = entity
-
-        try:
-            return self.entities.pop(position)
-        except KeyError:
-            pass
-        logger.debug(f"Remove failed, no entity @ {position}")
+        for entity in self.entities:
+            if entity.position == coords:
+                return entity
         return None
 
     def populate_room(self, room, max_monsters: int) -> list:
@@ -100,9 +77,10 @@ class Map:
 
         for monster in monsters:
             monster.position = random_xy(x_range, y_range)
-            while not self.add_entity(monster):
+            while self.entity_at(monster.position):
                 logger.debug(f"OCCUPADO @ {monster.position}")
                 monster.position = random_xy(x_range, y_range)
+            self.entities.append(monster)
             logger.debug(f"Placed monster {monster!r}")
         return monsters
 
@@ -136,7 +114,7 @@ class Map:
                 self.dig_room(room)
                 if len(self.rooms) == 0:
                     self.player.position = room.center
-                    self.add_entity(self.player)
+                    self.entities.append(self.player)
                     assert len(self.entities) == 1
                 else:
                     room_x, room_y = room.center
@@ -234,6 +212,11 @@ class Map:
             )
         return self._fov_map
 
+    def in_fov(self, x: int, y: int) -> bool:
+        """
+        """
+        return tcod.map_is_in_fov(self.fov_map, x, y)
+
     def update(self, radius, light_walls=True, algorithm=0) -> None:
         """
         """
@@ -271,5 +254,5 @@ class Map:
                 )
             self.needs_fov_recompute = False
 
-        for coord, entity in self.entities.items():
+        for entity in self.entities:
             entity.draw(console)
