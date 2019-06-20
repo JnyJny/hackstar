@@ -14,12 +14,43 @@ class MoveAction(BaseAction):
         self.x, self.y = (x, y)
 
 
+class IdleAction(BaseAction):
+    pass
+
+
+class InventoryAction(BaseAction):
+    pass
+
+
 class FullscreenAction(BaseAction):
     pass
 
 
 class QuitAction(BaseAction):
     pass
+
+
+_c_dispatch = {
+    "h": MoveAction(-1, 0),
+    "j": MoveAction(0, -1),
+    "k": MoveAction(0, 1),
+    "l": MoveAction(1, 0),
+    "y": MoveAction(-1, -1),
+    "u": MoveAction(1, -1),
+    "b": MoveAction(-1, 1),
+    "n": MoveAction(1, 1),
+    ".": IdleAction(),
+    "i": InventoryAction(),
+}
+
+
+_vk_dispatch = {
+    tcod.KEY_UP: MoveAction(0, -1),
+    tcod.KEY_DOWN: MoveAction(0, 1),
+    tcod.KEY_LEFT: MoveAction(-1, 0),
+    tcod.KEY_RIGHT: MoveAction(1, 0),
+    tcod.KEY_ESCAPE: QuitAction(),
+}
 
 
 def action_exceptions(key, mouse) -> None:
@@ -40,32 +71,17 @@ def action_exceptions(key, mouse) -> None:
 
     c = chr(key.c)
 
-    if key.vk == tcod.KEY_UP or c == "i":
-        raise MoveAction(0, -1)
+    try:
+        action = _c_dispatch[c]
+        raise action
+    except KeyError:
+        pass
 
-    if c == "y":
-        raise MoveAction(-1, -1)
-
-    if c == "u":
-        raise MoveAction(1, -1)
-
-    if c == "b":
-        raise MoveAction(-1, 1)
-
-    if c == "n":
-        raise MoveAction(1, 1)
-
-    if key.vk == tcod.KEY_DOWN or c == "k":
-        raise MoveAction(0, 1)
-
-    if key.vk == tcod.KEY_LEFT or c == "j":
-        raise MoveAction(-1, 0)
-
-    if key.vk == tcod.KEY_RIGHT or c == "l":
-        raise MoveAction(1, 0)
+    try:
+        action = _vk_dispatch[key.vk]
+        raise action
+    except KeyError:
+        pass
 
     if key.vk == tcod.KEY_ENTER and key.lalt:
         raise FullscreenAction()
-
-    if key.vk == tcod.KEY_ESCAPE:
-        raise QuitAction()

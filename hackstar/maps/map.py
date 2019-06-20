@@ -33,6 +33,8 @@ class Map:
 
     @property
     def rooms(self) -> list:
+        """List of rooms managed by the map. Left over from dig_dungeons.
+        """
         try:
             return self._rooms
         except AttributeError:
@@ -41,7 +43,9 @@ class Map:
         return self._rooms
 
     @property
-    def entities(self):
+    def entities(self) -> list:
+        """List of entities in the map.
+        """
         try:
             return self._entities
         except AttributeError:
@@ -50,8 +54,11 @@ class Map:
         return self._entities
 
     def entity_at(self, coords):
-        """
-        :param tuple coords:
+        """Searches the entities list for an etity at the given
+        coordinates in the map. The first matching entity is
+        returned, otherwise None is returned for no matches.
+
+        :param Tuple[int,int] coords:
         :return .Entity subclass:
         """
         for entity in self.entities:
@@ -60,12 +67,17 @@ class Map:
         return None
 
     def populate_room(self, room, max_monsters: int) -> list:
-        """
+        """Adds a random number of monsters up to max_monsters
+        to the supplied room.
+
+
         :param .maps.Rect room:
         :param int max_monsters:
         :return: list of monsters placed
         """
         n_monsters = random.randint(0, max_monsters)
+
+        # check that the n_monsters <= number of tiles in room
 
         x_range = (room.x + 1, room.x1 - 1)
         y_range = (room.y + 1, room.y1 - 1)

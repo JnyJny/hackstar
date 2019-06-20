@@ -1,7 +1,7 @@
 """
 """
 from loguru import logger
-import math
+
 import tcod
 
 from dataclasses import dataclass, field
@@ -35,7 +35,7 @@ class Entity:
             return self._name
         except AttributeError:
             pass
-        self._name = self.__class__.__name__
+        self._name = f"{self.__class__.__name__} {hex(id(self))}"
         return self._name
 
     @name.setter
@@ -74,7 +74,7 @@ class Entity:
 
         dx = target_x - self.x
         dy = target_y - self.y
-        distance = math.sqrt(dx ** 2 + dy ** 2)
+        distance = (dx ** 2 + dy ** 2) ** 0.5
         dx, dy = int(dx // distance), int(dy // distance)
 
         logger.info(
@@ -96,6 +96,40 @@ class Entity:
         logger.info(f"Entity {self.name} did move toward {(target_x, target_y)}")
         return True
 
+    def move_astar(self, target, game_map):
+        """
+        """
+
+        logger.debug(f"{self.name} A* Observe")
+
+        fov = tcod.map_new(game_map.w, game_map.h)
+
+        for tile in game_map:
+            tcod.map_set_properties(
+                fov, tile.x, tile.y, not tile.opaque, not tile.blocked
+            )
+
+        for entity in game_map.entities:
+            if entity == self:
+                continue
+            if entity.kind != Entities.ITEM:
+                tcod.map_set_properties(fov, entity.x, entity.y, True, False)
+
+        my_path = tcod.path_new_using_map(fov, 1.41)
+
+        logger.debug(f"{self.name} A* Orient")
+        tcod.path_compute(my_path, self.x, self.y, target.x, target.y)
+
+        logger.debug(f"{self.name} A* Decide")
+        if not tcod.path_is_empty(my_path) and tcod.path_size(my_path) < 25:
+            logger.debug("{self.name} A* Act 0")
+            self.position = tcod.path_walk(my_path, True)
+        else:
+            logger.debug(f"{self.name} A* Act 1")
+            self.move_towards(target.x, target.y, game_map)
+
+        tcod.path_delete(my_path)
+
     def distance_to(self, other):
         """
         """
@@ -104,7 +138,7 @@ class Entity:
         except AttributeError:
             dx, dy = other[0] - self.x, other[1] - self.y
 
-        return math.sqrt(dx ** 2 + dy ** 2)
+        return (dx ** 2 + dy ** 2) ** 0.5
 
     def erase(self, console, blank: str = " ", bg: int = None) -> None:
         """Erase this entity at it's current coords.

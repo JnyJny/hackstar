@@ -30,8 +30,9 @@ class Rect:
         return ",".join([str(p) for p in self.points])
 
     @property
-    def points(self):
-        """
+    def points(self) -> list:
+        """A list of tuples, each representing one corner
+        of the rectangle.
         """
         p0 = self.x, self.y
         p1 = self.x, self.y1
@@ -40,23 +41,35 @@ class Rect:
         return [p0, p1, p2, p3]
 
     @property
-    def center(self):
+    def center(self) -> tuple:
+        """The x,y coordinates for the center of this rectangle.
+        """
         x = (self.x + self.x1) // 2
         y = (self.y + self.y1) // 2
         return (x, y)
 
-    def xrange(self, step=1):
+    @property
+    def area(self):
+        """The area of this rectangle.
         """
+        return self.w - 1 * self.h - 1
+
+    def xrange(self, step=1):
+        """A range iterator for the inside 'x' dimension of this
+        rectangle.
         """
         return range(self.x + 1, self.x1, step)
 
     def yrange(self, step=1):
-        """
+        """A range iterator for the inside 'y' dimension of this
+        rectangle.
         """
         return range(self.y + 1, self.y1, step)
 
     def __contains__(self, other):
-
+        """Returns true if this rectangle is inside the
+        other rectangle.
+        """
         return (
             self.x <= other.x1
             and self.x1 >= other.x

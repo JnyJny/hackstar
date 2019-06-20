@@ -13,8 +13,11 @@ from .items import Item
 
 from .actions import action_exceptions
 from .actions import MoveAction
+from .actions import IdleAction
 from .actions import FullscreenAction
 from .actions import QuitAction
+from .actions import InventoryAction
+
 from .maps import Map, Tile, Rect
 from .states import GameState
 from .util import random_xy
@@ -178,6 +181,9 @@ class TheGame:
 
             action_exceptions(self.key, self.mouse)
 
+        except IdleAction as action:
+            self.state = GameState.MONSTER_TURN
+
         except MoveAction as action:
 
             self.player_turn(action)
@@ -188,6 +194,9 @@ class TheGame:
         except QuitAction:
             logger.debug("Quit")
             exit(0)
+
+        except Exception as unknown_action:
+            logger.debug(f"Caught unknown action {unknown_action}")
 
         if self.state == GameState.MONSTER_TURN:
             self.monsters_turn()
