@@ -16,6 +16,15 @@ class Monster(Entity, Fighter, BasicMonster):
 
     kind = Entities.MONSTER
 
+    def kill(self):
+        msg = f"{self.name.capitalized()} is dead!"
+        self.kind = Entities.CORPSE
+        self.char = "%"
+        self.color = tcod.dark_red
+        self.blocks = False
+        self.name = f"remains of {self.name}"
+        return msg
+
 
 class Troll(Monster):
     onscreen = "T"

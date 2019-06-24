@@ -58,6 +58,9 @@ class TheGame:
         self.fov_light_walls = True
         self.fov_radius = 10
 
+        self.player_turn_results = []
+        self.monster_turn_results = []
+
         self.state = GameState.PLAYER_TURN
 
     @property
@@ -135,7 +138,7 @@ class TheGame:
             entity = self.map.entity_at((x, y))
 
             if entity and entity.is_monster:
-                self.player.attack(entity)
+                self.player_turn_results.append(self.player.attack(entity))
             else:
                 if entity:
                     logger.info(f"There is a {entity!r} here")
@@ -154,11 +157,13 @@ class TheGame:
         """
 
         logger.info(f"Monster Turn: action={action}")
-        self.state = GameState.PLAYER_TURN
+
         for entity in self.map.entities:
             try:
                 entity.erase(self.console)
-                entity.take_turn(self.player, self.map)
+                self.monster_turn_results.append(
+                    entity.take_turn(self.player, self.map)
+                )
             except AttributeError:
                 pass
 
@@ -198,8 +203,49 @@ class TheGame:
         except Exception as unknown_action:
             logger.debug(f"Caught unknown action {unknown_action}")
 
+        for player_turn_result in self.player_turn_results:
+            message = player_turn_result.get("msg")
+            deader = player_turn_result.get("dead")
+
+            if message:
+                logger.info(message)
+
+            if deader and not deader.is_alive:
+                message = deader.kill()
+                if deader is self.player:
+                    self.state = GameState.PLAYER_DEAD
+                logger.info(message)
+                logger.debug(
+                    f"{deader.name.capitalize()} is DEAD! <{deader.hp}> {not deader.is_alive}"
+                )
+
+        self.player_turn_results.clear()
+
         if self.state == GameState.MONSTER_TURN:
+
             self.monsters_turn()
+
+            for monster_turn_result in self.monster_turn_results:
+                message = monster_turn_result.get("msg")
+                deader = monster_turn_result.get("dead")
+
+                if message:
+                    logger.info(message)
+
+                if deader:
+                    message = deader.kill()
+                    logger.info(message)
+                    logger.debug(
+                        f"{deader.name.capitalize()} is DEAD! <{deader.hp}> {not deader.is_alive}"
+                    )
+
+                    if deader is self.player:
+                        self.state = GameState.PLAYER_DEAD
+                        break
+            else:
+                self.state = GameState.PLAYER_TURN
+
+            self.monster_turn_results.clear()
 
         # XXX the player object should hold FOV radius, light walls
         #     since those are related to the player ( and map has a

@@ -10,11 +10,11 @@ class Fighter:
     """
 
     @property
-    def max_hp(self):
-        return 100
+    def max_hp(self) -> int:
+        return 3
 
     @property
-    def hp(self):
+    def hp(self) -> int:
         try:
             return self._hp
         except AttributeError:
@@ -23,11 +23,11 @@ class Fighter:
         return self._hp
 
     @hp.setter
-    def hp(self, new_value):
-        self._hp = max(self._hp + new_value, self.max_hp)
+    def hp(self, new_value) -> None:
+        self._hp = new_value
 
     @property
-    def defense(self):
+    def defense(self) -> int:
         try:
             return self._defense
         except AttributeError:
@@ -36,11 +36,11 @@ class Fighter:
         return self._defense
 
     @defense.setter
-    def defense(self, new_value):
+    def defense(self, new_value) -> None:
         self._defense = new_value
 
     @property
-    def power(self):
+    def power(self) -> int:
         try:
             return self._power
         except AttributeError:
@@ -48,7 +48,28 @@ class Fighter:
         self._power = 1
         return self._power
 
-    def attack(self, other):
+    def attack(self, target) -> dict:
         """Attack the other entity.
         """
-        logger.info(f"{self.name} is attacking {other.name}")
+        damage = self.power - target.defense
+
+        result = {"src": self, "dst": target, "msg": ""}
+
+        if damage > 0:
+            target.take_damage(damage)
+            message = (
+                f"{self.name} attacks {target.name} for {damage} damage! {target.hp}"
+            )
+            logger.info(message)
+        else:
+            message = f"{self.name} attacks {target.name} and missses!"
+            logger.info(message)
+
+        result["msg"] = message
+
+        return result
+
+    def take_damage(self, amount) -> None:
+        """
+        """
+        self.hp -= amount

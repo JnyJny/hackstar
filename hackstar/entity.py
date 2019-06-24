@@ -10,9 +10,10 @@ from enum import IntEnum
 
 class Entities(IntEnum):
     INVALID = -1
-    PLAYER = 0
-    MONSTER = 1
-    ITEM = 2
+    CORPSE = 0
+    PLAYER = 1
+    MONSTER = 2
+    ITEM = 3
 
 
 @dataclass
@@ -54,6 +55,15 @@ class Entity:
         """
         self.x, self.y, = new_position[:2]
 
+    @property
+    def is_alive(self):
+        """Returns True if this entity is alive."""
+        try:
+            return self.hp > 0
+        except AttributeError:
+            pass
+        return False
+
     def move(self, dx: int, dy: int) -> None:
         """Moves the entity by dx and dy and returns the previous coordinates
         as an (x,y) tuple.
@@ -88,7 +98,7 @@ class Entity:
             return False
 
         entity = game_map.entity_at((x, y))
-        if entity and entity.is_monster:
+        if entity and entity.is_monster and entity is not self:
             logger.info(f"Entity {self.name} blocked at {(x, y)} by {entity}")
             return False
 
@@ -181,3 +191,7 @@ class Entity:
     @property
     def is_item(self) -> bool:
         return self.kind == Entities.ITEM
+
+    @property
+    def is_corpse(self) -> bool:
+        return self.kind == Entities.CORPSE

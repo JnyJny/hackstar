@@ -32,8 +32,8 @@ class QuitAction(BaseAction):
 
 _c_dispatch = {
     "h": MoveAction(-1, 0),
-    "j": MoveAction(0, -1),
-    "k": MoveAction(0, 1),
+    "j": MoveAction(0, 1),
+    "k": MoveAction(0, -1),
     "l": MoveAction(1, 0),
     "y": MoveAction(-1, -1),
     "u": MoveAction(1, -1),

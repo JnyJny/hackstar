@@ -266,5 +266,15 @@ class Map:
                 )
             self.needs_fov_recompute = False
 
-        for entity in self.entities:
+        for entity in sorted(self.entities, key=lambda x: x.kind.value):
             entity.draw(console)
+
+        tcod.console_set_default_foreground(console, tcod.white)
+        tcod.console_print_ex(
+            console,
+            1,
+            self.h - 2,
+            tcod.BKGND_NONE,
+            tcod.LEFT,
+            f"HP: {self.player.hp:02d}/{self.player.max_hp:02d}",
+        )
